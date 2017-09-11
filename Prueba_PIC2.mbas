@@ -1,0 +1,171 @@
+program Controlador_sistema 'Nombre del programa
+
+dim saludo as byte      'palabra de sincronización entre los microcontroladores
+dim output as byte      'variable utilizada en la sincronización de los microcontroladores
+dim pwm as byte         'pwm (inclinación del joystick)
+dim Botones_ES as byte  'estado de los botones
+
+sub procedure InitMain() 'Procedimeinto para inicializar puertos
+
+TRISA=0 'PORTA configurado como salida
+PORTA=0 'PORTA inicializado a cero
+TRISB=0 'PORTB configurado como salida
+PORTB=0 'PORTB inicializado a cero
+TRISD=0 'PORTD configurado como salida
+PORTD=0 'PORTD inicializado a cero
+TRISC=0 'PORTC configurado como salida
+PORTC=0 'PORTC inicializado a cero
+TRISE=0 'PORTE configurado como salida
+PORTE=0 'PORTE inicializado a cero
+output=0
+saludo=%01010101 'Palabra de sincronización
+pwm=0            'Inicializo pwm a cero
+UART1_Init(19200) 'Inicializo puerto UART a 19200 bps
+Delay_ms(300)    'Tiempo para que se estabilice el puerto UART
+PWM1_Init(400)   'Inicializo PWM1 a 400 Hz
+PWM2_Init(400)   'Inicializo PWM2 a 400 Hz
+PWM1_Start()     'Inicio PWM1
+PWM2_Start()     'Inicio PWM2
+
+end sub
+
+main:
+InitMain()                 'Llamo al procedimiento que inicializa los puertos
+
+
+Do                         'Rutina de sincronización de los microcontroladores
+output=UART1_Read
+UART1_Write(output)
+Loop until output=saludo
+
+
+while(1)                   'Loop infinito
+
+Botones_ES=UART1_read      'Recibo estado de los botones
+Delay_ms(50)
+pwm=UART1_read             'Recibo pwm(inclinación del joystick)
+
+
+PORTB=Botones_ES           'Pongo el estado de los botones en el PORTB
+
+
+select case Botones_ES              'Estado de los Botones
+case %00111110                      'El botón 1 es apretado, se elige mover la base del robot
+if (pwm>=120) and (pwm<=134) then   'La palanca no está inclinada
+pwm=0                               'No hay pwm
+PORTA=%00001100                     'La base no se mueve, el hombro se traba para que no se caiga.
+PWM1_Set_Duty(255)                  'Ciclo de trabajo del pwm
+else
+if pwm>134 then                     'La palanca es inclinada a la derecha
+pwm=(-pwm-255)+(3*pwm)              'Ajuste del pwm
+PORTA=%00001110                     'La base gira hacia la izquierda, el hombro se traba para que no se caiga
+PWM1_Set_Duty(pwm)                  'Ciclo de trabajo del pwm
+else
+if pwm<120 then                     'La palanca es inclinada a la izquierda
+pwm=(pwm+255)-(3*pwm)               'Ajuste del pwm
+PORTA=%00001101                     'La base se mueve a la derecha , el hombro se traba para que no se caiga
+PWM1_Set_Duty(pwm)
+end if
+end if
+end if
+
+case %00111101                      'El botón 2 es apretado, se elige mover el hombro del robot
+if (pwm>=120) and (pwm<=134) then   'La palanca no está inclinada
+pwm=0
+PORTA=%00001100                     'El hombro no se mueve
+PWM1_Set_Duty(255)
+else
+if pwm>134 then                     'La palanca es inclinada hacia arriba
+pwm=(-pwm-255)+(3*pwm)
+PORTA=%00000100                     'El hombro se mueve hacia arriba
+PWM1_Set_Duty(pwm)
+else
+if pwm<120 then                     'La palanca es inclinada hacia abajo
+pwm=(pwm+255)-(3*pwm)
+PORTA=%00001000                     'El hombro se mueve hacia abajo
+PWM1_Set_Duty(pwm)
+end if
+end if
+end if
+
+case %00111011                      'El botón 3 es apretado, se elige mover el codo del robot
+if (pwm>=120) and (pwm<=134) then   'La palanca no está inclinada
+pwm=0
+PORTE=%00000011                     'El codo no se mueve
+PWM1_Set_Duty(255)
+else
+if pwm>134 then                     'La palanca está inclinada hacia arriba
+pwm=(-pwm-255)+(3*pwm)
+PORTE=%00000001                     'El codo se mueve hacia arriba
+PWM1_Set_Duty(pwm)
+else
+if pwm<120 then                     'La palanca está inclinada hacia abajo
+pwm=(pwm+255)-(3*pwm)
+PORTE=%00000010                     'El codo se mueve hacia abajo
+PWM1_Set_Duty(pwm)
+end if
+end if
+end if
+
+case %00110111                      'El botón 4 es apretado, se elige subir o bajar la muñeca del robot
+if (pwm>=120) and (pwm<=134) then   'La palanca no está inclinada
+pwm=0
+PORTD=%00000000                     'La muñeca no se mueve
+PWM2_Set_Duty(pwm)
+else
+if pwm>134 then                     'La palanca está inclinada hacia arriba
+pwm=(-pwm-255)+(3*pwm)
+PORTD=%00001001                     'La muñeca se mueve hacia arriba
+PWM2_Set_Duty(pwm)
+else
+if pwm<120 then                     'La palanca está inclinada hacia abajo
+pwm=(pwm+255)-(3*pwm)
+PORTD=%00000110                     'La muñeca se mueve hacia abajo
+PWM2_Set_Duty(pwm)
+end if
+end if
+end if
+
+case %00101111                      'El botón 5 es apretado, se elige rotar la muñeca
+if (pwm>=120) and (pwm<=134) then   'La palanca no está inclinada
+pwm=0
+PORTD=%00000000                     'La muñeca no rota
+PWM2_Set_Duty(pwm)
+else
+if pwm>134 then                     'La palanca está inclinada a la derecha
+pwm=(-pwm-255)+(3*pwm)
+PORTD=%00001010                     'La muñeca rota a la derecha
+PWM2_Set_Duty(pwm)
+else
+if pwm<120 then                     'La palanca está inclinada a la izquierda
+pwm=(pwm+255)-(3*pwm)
+PORTD=%00000101                     'La muñeca rota a la izquierda
+PWM2_Set_Duty(pwm)
+end if
+end if
+end if
+
+case %00011111                      'El botón 6 es apretado, se elige mover la pinza
+if (pwm>=120) and (pwm<=134) then   'La palanca no está inclinada
+pwm=0
+PORTD=%00000000                     'La pinza no se mueve
+PWM2_Set_Duty(pwm)
+else
+if pwm>134 then                     'La palanca es inclinada a la derecha
+pwm=(-pwm-255)+(3*pwm)
+PORTD=%00010000                     'La pinza abre
+PWM2_Set_Duty(pwm)
+else
+if pwm<120 then                     'La palanca es inclinada a la izquierda
+pwm=(pwm+255)-(3*pwm)
+PORTD=%00100000                     'La pinza cierra
+PWM2_Set_Duty(pwm)
+end if
+end if
+end if
+
+end select
+
+wend
+
+end.
