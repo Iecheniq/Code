@@ -1,0 +1,4 @@
+https://es.wikibooks.org/wiki/Programaci%C3%B3n_en_C/Sockets
+http://www.binarytides.com/server-client-example-c-sockets-linux/
+http://www.thegeekstuff.com/2012/04/create-threads-in-linux/?utm_source=feedburner
+http://www.chuiding.org/clinux/procesos/procesoshilos.php
